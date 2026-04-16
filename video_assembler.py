@@ -1,8 +1,10 @@
 # video_assembler.py
+
 import subprocess
 
+
 def assemble_video(background_path, audio_path, output_path):
-    print(f"🎬 Склейка: {background_path} + {audio_path} → {output_path}")
+    print(f"[VIDEO] Assembling: {background_path} + {audio_path} -> {output_path}")
 
     command = [
         "ffmpeg", "-y",
@@ -30,6 +32,6 @@ def assemble_video(background_path, audio_path, output_path):
     process.wait()
 
     if process.returncode == 0:
-        print(f"✅ Финал: {output_path}")
+        print(f"[VIDEO] Success: {output_path}")
     else:
-        raise RuntimeError(f"❌ ffmpeg завершился с кодом: {process.returncode}")
+        raise RuntimeError(f"FFmpeg failed with code: {process.returncode}")
