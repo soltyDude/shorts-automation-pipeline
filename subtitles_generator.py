@@ -1,5 +1,7 @@
 # subtitles_generator.py
+
 import whisper
+
 
 def generate_subtitles(audio_path: str = "voice.mp3", output_path: str = "voice.srt"):
     model = whisper.load_model("base")
@@ -13,9 +15,11 @@ def generate_subtitles(audio_path: str = "voice.mp3", output_path: str = "voice.
         return f"{hours:02}:{minutes:02}:{seconds:02},{milliseconds:03}"
 
     with open(output_path, "w", encoding="utf-8") as srt_file:
-        for i, segment in enumerate(result['segments']):
-            srt_file.write(f"{i+1}\n")
-            srt_file.write(f"{format_time(segment['start'])} --> {format_time(segment['end'])}\n")
+        for i, segment in enumerate(result["segments"]):
+            srt_file.write(f"{i + 1}\n")
+            srt_file.write(
+                f"{format_time(segment['start'])} --> {format_time(segment['end'])}\n"
+            )
             srt_file.write(f"{segment['text'].strip()}\n\n")
 
-    print(f"✅ Субтитры сохранены: {output_path}")
+    print(f"Subtitles saved: {output_path}")
