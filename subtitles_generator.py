@@ -1,21 +1,56 @@
-# subtitles_generator.py
-import whisper
+# gdrive_client.py
 
-def generate_subtitles(audio_path: str = "voice.mp3", output_path: str = "voice.srt"):
-    model = whisper.load_model("base")
-    result = model.transcribe(audio_path, task="transcribe", fp16=False)
+import io
+import os
+from google.cloud import storage
+from googleapiclient.discovery import build
+from googleapiclient.http import MediaIoBaseDownload
 
-    def format_time(t):
-        hours = int(t // 3600)
-        minutes = int((t % 3600) // 60)
-        seconds = int(t % 60)
-        milliseconds = int((t - int(t)) * 1000)
-        return f"{hours:02}:{minutes:02}:{seconds:02},{milliseconds:03}"
 
-    with open(output_path, "w", encoding="utf-8") as srt_file:
-        for i, segment in enumerate(result['segments']):
-            srt_file.write(f"{i+1}\n")
-            srt_file.write(f"{format_time(segment['start'])} --> {format_time(segment['end'])}\n")
-            srt_file.write(f"{segment['text'].strip()}\n\n")
+PROJECT_ID = "autopost-466916"
+DRIVE_FIELDS = "files(id, name)"
 
-    print(f"✅ Субтитры сохранены: {output_path}")
+
+def build_drive_service(creds):
+    return build("drive", "v3", credentials=creds)
+
+
+def download_file_by_name(service, filename, local_path):
+    results = service.files().list(
+        q=f"name='{filename}' and trashed = false",
+        fields=DRIVE_FIELDS
+    ).execute()
+
+    items = results.get("files", [])
+    if not items:
+        raise FileNotFoundError(f"File '{filename}' not found in Google Drive")
+
+    file_id = items[0]["id"]
+    request = service.files().get_media(fileId=file_id)
+
+    with io.FileIO(local_path, "wb") as fh:
+        downloader = MediaIoBaseDownload(fh, request)
+        done = False
+
+        while not done:
+            status, done = downloader.next_chunk()
+            if status:
+                progress = int(status.progress() * 100)
+                print(f"[DOWNLOAD] {progress}%")
+
+    print(f"[OK] Downloaded: {filename} -> {local_path}")
+
+
+def upload_to_gcs(creds, local_path, bucket_name, destination_blob_name=None):
+    if destination_blob_name is None:
+        destination_blob_name = os.path.basename(local_path)
+
+    client = storage.Client(project=PROJECT_ID, credentials=creds)
+    bucket = client.bucket(bucket_name)
+    blob = bucket.blob(destination_blob_name)
+
+    print(f"[UPLOAD] gs://{bucket_name}/{destination_blob_name}")
+    blob.upload_from_filename(local_path)
+
+    print(f"[OK] Public URL: {blob.public_url}")
+    return blob.public_url
