@@ -36,12 +36,15 @@ def download_file_by_name(service, filename, local_path):
             status, done = downloader.next_chunk()
             if status:
                 progress = int(status.progress() * 100)
-                print(f"Downloading: {progress}%")
+                print(f"Downloading {filename}: {progress}%")
 
     print(f"Downloaded: {filename} -> {local_path}")
 
 
 def upload_to_gcs(creds, local_path, bucket_name, destination_blob_name=None):
+    if not os.path.exists(local_path):
+        raise FileNotFoundError(f"File '{local_path}' does not exist")
+
     if destination_blob_name is None:
         destination_blob_name = os.path.basename(local_path)
 
